@@ -2,6 +2,10 @@
 
 ## [0.1.3] - 2025-06-28
 
+### Changed
+- Default keybind is now F5
+- If your inventory is full, items spawn above your head instead of on the floor where you are looking
+
 ### Fixed
 - Items should now only spawn once in multiplayer
 

@@ -6,6 +6,8 @@ using UnityEngine.InputSystem;
 using UnityEngine;
 using Zorro.Core;
 using UnityEngine.UI;
+using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
+using System.Linq;
 
 namespace ItemSpawner
 {
@@ -15,9 +17,11 @@ namespace ItemSpawner
         public override bool selectOnOpen => false;
         public override bool closeOnPause => true;
         public override bool closeOnUICancel => true;
-        public override bool autoHideOnClose => false;
+        public override bool autoHideOnClose => true;
+        public override GameObject panel => canvas.gameObject;
 
         private Canvas canvas;
+        private InputAction toggleAction;
 
         void Awake()
         {
@@ -28,7 +32,7 @@ namespace ItemSpawner
         public override void Initialize()
         {
             Transform itemEntryTemplate = canvas.transform.FindChildRecursive("ItemEntry");
-
+            TMP_FontAsset darumaFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().ToList().Find(x => x.name == "DarumaDropOne-Regular SDF");
             List<Item> items = ItemDatabase.Instance.Objects;
 
             foreach (Item item in items)
@@ -36,26 +40,40 @@ namespace ItemSpawner
                 Transform itemEntry = GameObject.Instantiate(itemEntryTemplate, itemEntryTemplate.transform.parent);
                 TextMeshProUGUI itemName = itemEntry.Find("ItemName").GetComponent<TextMeshProUGUI>();
                 itemName.text = item.UIData.itemName;
-                itemName.font = Resources.Load<TMP_FontAsset>("Font/DarumaDropOne-Regular SDF");
+                itemName.font = darumaFont;
                 itemEntry.Find("ItemIcon").GetComponent<UnityEngine.UI.RawImage>().texture = item.UIData.icon;
                 itemEntry.GetComponent<Button>().onClick.AddListener(() => Plugin.Spawn(item));
                 itemEntry.gameObject.SetActive(true);
             }
         }
 
-        public void Toggle()
+        public void Toggle(InputAction.CallbackContext _)
         {
             if (!base.isOpen)
             {
                 this.Open();
-                this.canvas.gameObject.SetActive(true);
                 return;
             }
             base.Close();
         }
-        public override void OnClose()
+
+        void OnEnable()
         {
-            this.canvas.gameObject.SetActive(false);
+            toggleAction = new InputAction(
+                name: "ToggleItemSpawner",
+                type: InputActionType.Button,
+                binding: "<Keyboard>/" + Plugin.ToggleKey.ToString().ToLower()
+            );
+
+            toggleAction.performed += Toggle;
+            toggleAction.Enable();
+        }
+
+        void OnDisable()
+        {
+            toggleAction.Disable();
+            toggleAction.performed -= Toggle;
+            toggleAction.Dispose();
         }
     }
 }
